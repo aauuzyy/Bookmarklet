@@ -41,6 +41,30 @@ local Window = Rayfield:CreateWindow({
 local FlameTab = Window:CreateTab("Inferno", 4483362458)
 local FlameSection = FlameTab:CreateSection("Infernix Features")
 
+FlameTab:CreateParagraph({Title = "About Infernix Hub", Content = "Infernix Hub is a powerful exploit script designed for advanced gameplay mechanics. This tab contains core features and information about the script capabilities."})
+
+FlameTab:CreateLabel("Version: 1.0.0")
+FlameTab:CreateLabel("Created by: Rai_GA")
+FlameTab:CreateLabel("Last Updated: January 2026")
+
+local InfoSection = FlameTab:CreateSection("Script Information")
+
+FlameTab:CreateParagraph({Title = "Key System", Content = "Keys reset every 24 hours automatically. Get your keys from infernix-keys.vercel.app/keys.txt. All 10 keys are valid until the next reset cycle."})
+
+FlameTab:CreateParagraph({Title = "Features Overview", Content = "This script includes aim assistance, visual enhancements, attack modifiers, and strength boosters. Navigate through the tabs to access different feature categories."})
+
+local StatusSection = FlameTab:CreateSection("Status")
+
+FlameTab:CreateLabel("Script Status: Active")
+FlameTab:CreateLabel("Performance: Optimized")
+FlameTab:CreateLabel("Compatibility: Universal")
+
+local WarningSection = FlameTab:CreateSection("Important Notes")
+
+FlameTab:CreateParagraph({Title = "Usage Warning", Content = "Use responsibly. Excessive or obvious use of exploit features may result in detection. Features are designed to mimic natural gameplay as closely as possible."})
+
+FlameTab:CreateParagraph({Title = "Configuration", Content = "All settings are automatically saved in your InfernixHub folder. Your configurations persist between sessions and the key system remembers valid keys."})
+
 local VisualTab = Window:CreateTab("Visual", "eye")
 local LightingSection = VisualTab:CreateSection("Lighting")
 
@@ -108,6 +132,762 @@ local FogToggle = VisualTab:CreateToggle({
             game.Lighting.FogEnd = 100000
         else
             game.Lighting.FogEnd = 1000
+        end
+    end,
+})
+
+local BrightnessSlider = VisualTab:CreateSlider({
+    Name = "Brightness",
+    Range = {0, 5},
+    Increment = 0.1,
+    CurrentValue = 2,
+    Flag = "Brightness",
+    Callback = function(Value)
+        game.Lighting.Brightness = Value
+    end,
+})
+
+local ExposureSlider = VisualTab:CreateSlider({
+    Name = "Exposure",
+    Range = {-3, 3},
+    Increment = 0.1,
+    CurrentValue = 0,
+    Flag = "Exposure",
+    Callback = function(Value)
+        game.Lighting.ExposureCompensation = Value
+    end,
+})
+
+local ShadowToggle = VisualTab:CreateToggle({
+    Name = "Remove Shadows",
+    CurrentValue = false,
+    Flag = "RemoveShadows",
+    Callback = function(Value)
+        if Value then
+            game.Lighting.GlobalShadows = false
+        else
+            game.Lighting.GlobalShadows = true
+        end
+    end,
+})
+
+local ESPSection = VisualTab:CreateSection("Player ESP")
+
+local espEnabled = false
+local espConnections = {}
+local espObjects = {}
+
+local function createESP(player)
+    if player == game.Players.LocalPlayer then return end
+    
+    local function addESP(character)
+        if not character then return end
+        
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
+        if not humanoidRootPart then return end
+        
+        local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Name = "ESP"
+        billboardGui.Adornee = humanoidRootPart
+        billboardGui.Size = UDim2.new(0, 200, 0, 50)
+        billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+        billboardGui.AlwaysOnTop = true
+        billboardGui.Parent = humanoidRootPart
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Name = "NameLabel"
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+        nameLabel.Font = Enum.Font.SourceSansBold
+        nameLabel.Text = player.Name
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextSize = 16
+        nameLabel.TextStrokeTransparency = 0.5
+        nameLabel.Parent = billboardGui
+        
+        local distanceLabel = Instance.new("TextLabel")
+        distanceLabel.Name = "DistanceLabel"
+        distanceLabel.BackgroundTransparency = 1
+        distanceLabel.Position = UDim2.new(0, 0, 0.5, 0)
+        distanceLabel.Size = UDim2.new(1, 0, 0.5, 0)
+        distanceLabel.Font = Enum.Font.SourceSans
+        distanceLabel.Text = "0 studs"
+        distanceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        distanceLabel.TextSize = 14
+        distanceLabel.TextStrokeTransparency = 0.5
+        distanceLabel.Parent = billboardGui
+        
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESP_Highlight"
+        highlight.Adornee = character
+        highlight.FillColor = Color3.fromRGB(255, 85, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = character
+        
+        if not espObjects[player.Name] then
+            espObjects[player.Name] = {}
+        end
+        espObjects[player.Name].Billboard = billboardGui
+        espObjects[player.Name].Highlight = highlight
+        
+        local updateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+            if espEnabled and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and humanoidRootPart then
+                local distance = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
+                distanceLabel.Text = math.floor(distance) .. " studs"
+            end
+        end)
+        
+        table.insert(espConnections, updateConnection)
+    end
+    
+    if player.Character then
+        addESP(player.Character)
+    end
+    
+    player.CharacterAdded:Connect(addESP)
+end
+
+local function removeESP()
+    for _, connection in pairs(espConnections) do
+        connection:Disconnect()
+    end
+    espConnections = {}
+    
+    for _, objects in pairs(espObjects) do
+        if objects.Billboard then objects.Billboard:Destroy() end
+        if objects.Highlight then objects.Highlight:Destroy() end
+    end
+    espObjects = {}
+end
+
+local ESPToggle = VisualTab:CreateToggle({
+    Name = "Player ESP",
+    CurrentValue = false,
+    Flag = "PlayerESP",
+    Callback = function(Value)
+        espEnabled = Value
+        
+        if Value then
+            for _, player in pairs(game.Players:GetPlayers()) do
+                createESP(player)
+            end
+            
+            game.Players.PlayerAdded:Connect(function(player)
+                if espEnabled then
+                    createESP(player)
+                end
+            end)
+        else
+            removeESP()
+        end
+    end,
+})
+
+local tracersEnabled = false
+local tracerConnections = {}
+local tracerObjects = {}
+
+local TracersToggle = VisualTab:CreateToggle({
+    Name = "Tracer Lines",
+    CurrentValue = false,
+    Flag = "Tracers",
+    Callback = function(Value)
+        tracersEnabled = Value
+        
+        if Value then
+            local RunService = game:GetService("RunService")
+            local Players = game:GetService("Players")
+            local LocalPlayer = Players.LocalPlayer
+            local Camera = workspace.CurrentCamera
+            
+            local connection = RunService.RenderStepped:Connect(function()
+                if not tracersEnabled then return end
+                
+                for _, obj in pairs(tracerObjects) do
+                    if obj then obj:Remove() end
+                end
+                tracerObjects = {}
+                
+                if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    return
+                end
+                
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local line = Drawing.new("Line")
+                        line.Visible = true
+                        line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                        
+                        local hrpPosition, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+                        if onScreen then
+                            line.To = Vector2.new(hrpPosition.X, hrpPosition.Y)
+                            line.Color = Color3.fromRGB(255, 85, 0)
+                            line.Thickness = 1
+                            line.Transparency = 1
+                            table.insert(tracerObjects, line)
+                        else
+                            line:Remove()
+                        end
+                    end
+                end
+            end)
+            
+            table.insert(tracerConnections, connection)
+        else
+            for _, connection in pairs(tracerConnections) do
+                connection:Disconnect()
+            end
+            tracerConnections = {}
+            
+            for _, obj in pairs(tracerObjects) do
+                if obj then obj:Remove() end
+            end
+            tracerObjects = {}
+        end
+    end,
+})
+
+local HealthBarsToggle = VisualTab:CreateToggle({
+    Name = "Health Bars",
+    CurrentValue = false,
+    Flag = "HealthBars",
+    Callback = function(Value)
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                local humanoid = player.Character:FindFirstChild("Humanoid")
+                if humanoid then
+                    local healthBar = player.Character:FindFirstChild("HealthBar")
+                    
+                    if Value and not healthBar then
+                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Name = "HealthBar"
+                            billboard.Adornee = hrp
+                            billboard.Size = UDim2.new(4, 0, 0.5, 0)
+                            billboard.StudsOffset = Vector3.new(0, 4, 0)
+                            billboard.AlwaysOnTop = true
+                            billboard.Parent = player.Character
+                            
+                            local frame = Instance.new("Frame")
+                            frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                            frame.BorderSizePixel = 2
+                            frame.Size = UDim2.new(1, 0, 1, 0)
+                            frame.Parent = billboard
+                            
+                            local healthFill = Instance.new("Frame")
+                            healthFill.Name = "Fill"
+                            healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                            healthFill.BorderSizePixel = 0
+                            healthFill.Size = UDim2.new(humanoid.Health / humanoid.MaxHealth, 0, 1, 0)
+                            healthFill.Parent = frame
+                            
+                            humanoid.HealthChanged:Connect(function(health)
+                                if healthFill then
+                                    healthFill.Size = UDim2.new(health / humanoid.MaxHealth, 0, 1, 0)
+                                    
+                                    if health / humanoid.MaxHealth > 0.5 then
+                                        healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                                    elseif health / humanoid.MaxHealth > 0.25 then
+                                        healthFill.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+                                    else
+                                        healthFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                                    end
+                                end
+                            end)
+                        end
+                    elseif not Value and healthBar then
+                        healthBar:Destroy()
+                    end
+                end
+            end
+        end
+    end,
+})
+
+local ItemESPSection = VisualTab:CreateSection("Item ESP")
+
+local itemESPEnabled = false
+local itemESPObjects = {}
+local itemESPConnections = {}
+local selectedItemName = ""
+local itemESPColor = Color3.fromRGB(255, 255, 0)
+local itemESPDistance = 1000
+
+local ftapItems = {
+    "Cursed Alarm Clock", "Edgy Desk", "Short Daycare Box Thing", "Cracked Stool", "Chair (Metal)", 
+    "Bench", "Lamp", "Banner", "Gas Lantern Light", "Spooky Chair", "Daycare Table", 
+    "Desk (Traditional)", "Chair (Traditional)", "Nightstand", "Long Daycare Box Thing", "Basic Bench",
+    "Glass Door Cabinet", "Basic Desk", "Basic Shelf", "Spooky Bench", "Spooky Cabinet", "Lab Table",
+    "Daycare Chair", "Daycare Bench", "Daycare Desk", "Heart Arm Chair", "Arm Chair", "Microwave Oven",
+    "Table (Metal)", "Tree", "Couch (Metal)", "Bench (Traditional)", "Recliner", "Desk (Metal)",
+    "Shelf (Traditional)", "Paper Lantern", "Dresser (Traditional)", "Couch (Traditional)", "Daycare Shelf",
+    "Futon Bed", "Shelf (Metal)", "Arm Chair (Spiked)", "Cabinet (Metal)", "Spooky Desk", "Spooky Shelf",
+    "Spooky Table", "Cactus", "Table (Darkwood)", "Couch", "Couch (Spiked)", "Table (Lightwood)",
+    "Very Wide Recliner", "School Lunch Table", "Ladder (Lightwood)", "Paper Fan", "Bonsai",
+    "Table (Traditional)", "Blue Bed", "Orange Bed", "Heart Couch", "Coffin Couch", "Corner Counter",
+    "Counter", "Toilet", "Refridgerator", "Oven", "Cathode Ray Television", "Oven (Burnt)", "Desk Fan",
+    "Gong", "Washing Machine", "Flatscreen Television", "Bathroom Shower", "Bathroom Sink", "Laptop",
+    "Kitchen Sink", "Golden Toilet", "Jukebox (Yellow)", "Jukebox (Cyan)", "Christmas Tree",
+    "Desk Lamp", "Light Ball", "Candlestick", "Crystal", "Spotlight (Red)", "Spotlight (Green)",
+    "Spotlight (Blue)", "Spotlight (White)", "Sparkler", "Campfire", "Three Candle Candelabra",
+    "Five Candle Candelabra", "Disco Cube", "Plate", "Broccoli", "Mug (Brown Fluid)", "Mug (White Fluid)",
+    "Donut", "Hotdog", "Pepperoni Pizza", "Cheeze Pizza", "Soda", "Meat", "Sunny-side Up Egg",
+    "Slice of Bread", "Slice of Cake", "Coconut", "French Fries", "Banana", "Mysterious Mushroom",
+    "Hamburger", "Poop!", "Hot Sauce", "Sparkling Poop!", "Mayonnaise", "Katana", "Cleaver", "Pencil",
+    "Digging Fork", "Pickaxe", "Shuriken", "Kunai", "Missile", "Blobman", "Smoke Bomb", "Unstable Substance",
+    "Jukebox", "Rhythm Maker", "Microphone", "Saxophone", "Bugle", "Trumpet", "Bongos", "Snare Drum",
+    "Acoustic Guitar", "Lyre", "Ukulele", "Violin", "Ocarina", "Keyboard", "Melodica", "Vuvuzela",
+    "Banjo", "Midi Keyboard", "Little Helicopter", "Little Plane", "Little UFO", "Figurine You",
+    "Snowman", "Toy Frog", "Toy Tiger", "Toy Duck", "Toy Unicorn", "Toy Bear", "Glider", "Balloon",
+    "Basketball", "Bubble Blower", "Santa's Sleigh", "Tractor", "Robot"
+}
+
+table.sort(ftapItems)
+
+local ItemNameInput = VisualTab:CreateInput({
+    Name = "Item Name to ESP",
+    PlaceholderText = "Enter item name or use dropdown",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        selectedItemName = Text
+    end,
+})
+
+local ItemPresetDropdown = VisualTab:CreateDropdown({
+    Name = "FTAP Items",
+    Options = ftapItems,
+    CurrentOption = {"Plate"},
+    MultipleOptions = false,
+    Flag = "ItemPreset",
+    Callback = function(Option)
+        selectedItemName = Option[1]
+    end,
+})
+
+local ItemDistanceSlider = VisualTab:CreateSlider({
+    Name = "ESP Max Distance",
+    Range = {100, 5000},
+    Increment = 100,
+    Suffix = " studs",
+    CurrentValue = 1000,
+    Flag = "ItemESPDistance",
+    Callback = function(Value)
+        itemESPDistance = Value
+    end,
+})
+
+local ItemColorPicker = VisualTab:CreateColorPicker({
+    Name = "Item ESP Color",
+    Color = Color3.fromRGB(255, 255, 0),
+    Flag = "ItemESPColor",
+    Callback = function(Value)
+        itemESPColor = Value
+        
+        for _, espData in pairs(itemESPObjects) do
+            if espData.Highlight then
+                espData.Highlight.FillColor = Value
+            end
+            if espData.Billboard then
+                local nameLabel = espData.Billboard:FindFirstChild("NameLabel")
+                if nameLabel then
+                    nameLabel.TextColor3 = Value
+                end
+            end
+        end
+    end,
+})
+
+local function createItemESP(item)
+    if not item:IsA("BasePart") and not item:IsA("Model") then return end
+    
+    local primaryPart = item:IsA("Model") and item.PrimaryPart or item
+    if not primaryPart then return end
+    
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "ItemESP"
+    billboardGui.Adornee = primaryPart
+    billboardGui.Size = UDim2.new(0, 200, 0, 50)
+    billboardGui.StudsOffset = Vector3.new(0, 2, 0)
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Parent = primaryPart
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.Text = item.Name
+    nameLabel.TextColor3 = itemESPColor
+    nameLabel.TextSize = 16
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Parent = billboardGui
+    
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Name = "DistanceLabel"
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    distanceLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    distanceLabel.Font = Enum.Font.SourceSans
+    distanceLabel.Text = "0 studs"
+    distanceLabel.TextColor3 = itemESPColor
+    distanceLabel.TextSize = 14
+    distanceLabel.TextStrokeTransparency = 0.5
+    distanceLabel.Parent = billboardGui
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ItemESP_Highlight"
+    highlight.Adornee = item
+    highlight.FillColor = itemESPColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Parent = item
+    
+    local uniqueId = tostring(item) .. "_" .. tick()
+    itemESPObjects[uniqueId] = {
+        Billboard = billboardGui,
+        Highlight = highlight,
+        Item = item,
+        PrimaryPart = primaryPart
+    }
+    
+    local updateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+        if itemESPEnabled and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and primaryPart then
+            local distance = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - primaryPart.Position).Magnitude
+            
+            if distance <= itemESPDistance then
+                distanceLabel.Text = math.floor(distance) .. " studs"
+                billboardGui.Enabled = true
+                highlight.Enabled = true
+            else
+                billboardGui.Enabled = false
+                highlight.Enabled = false
+            end
+        end
+    end)
+    
+    table.insert(itemESPConnections, updateConnection)
+end
+
+local function removeItemESP()
+    for _, connection in pairs(itemESPConnections) do
+        connection:Disconnect()
+    end
+    itemESPConnections = {}
+    
+    for _, espData in pairs(itemESPObjects) do
+        if espData.Billboard then espData.Billboard:Destroy() end
+        if espData.Highlight then espData.Highlight:Destroy() end
+    end
+    itemESPObjects = {}
+end
+
+local function scanForItems()
+    if selectedItemName == "" then return end
+    
+    removeItemESP()
+    
+    local function searchDescendants(parent)
+        for _, obj in pairs(parent:GetDescendants()) do
+            if itemESPEnabled and obj.Name:lower():find(selectedItemName:lower()) then
+                if obj:IsA("BasePart") or obj:IsA("Model") then
+                    local isPlayerPart = false
+                    
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        if player.Character and obj:IsDescendantOf(player.Character) then
+                            isPlayerPart = true
+                            break
+                        end
+                    end
+                    
+                    if not isPlayerPart then
+                        createItemESP(obj)
+                    end
+                end
+            end
+        end
+    end
+    
+    searchDescendants(workspace)
+end
+
+local ItemESPToggle = VisualTab:CreateToggle({
+    Name = "Enable Item ESP",
+    CurrentValue = false,
+    Flag = "ItemESP",
+    Callback = function(Value)
+        itemESPEnabled = Value
+        
+        if Value then
+            if selectedItemName == "" then
+                Rayfield:Notify({
+                    Title = "Item ESP",
+                    Content = "Please enter an item name first!",
+                    Duration = 3,
+                })
+                return
+            end
+            
+            scanForItems()
+            
+            workspace.DescendantAdded:Connect(function(obj)
+                if itemESPEnabled and obj.Name:lower():find(selectedItemName:lower()) then
+                    wait(0.1)
+                    if obj:IsA("BasePart") or obj:IsA("Model") then
+                        createItemESP(obj)
+                    end
+                end
+            end)
+            
+            Rayfield:Notify({
+                Title = "Item ESP",
+                Content = "Now tracking: " .. selectedItemName,
+                Duration = 2,
+            })
+        else
+            removeItemESP()
+        end
+    end,
+})
+
+local RefreshItemsButton = VisualTab:CreateButton({
+    Name = "Refresh Item ESP",
+    Callback = function()
+        if itemESPEnabled then
+            scanForItems()
+            Rayfield:Notify({
+                Title = "Item ESP",
+                Content = "Refreshed ESP for: " .. selectedItemName,
+                Duration = 2,
+            })
+        else
+            Rayfield:Notify({
+                Title = "Item ESP",
+                Content = "Enable Item ESP first!",
+                Duration = 2,
+            })
+        end
+    end,
+})
+
+local SkySection = VisualTab:CreateSection("Sky & Atmosphere")
+
+local skyboxes = {
+    ["Default"] = "Default",
+    ["Purple Nebula"] = "rbxassetid://159454299",
+    ["Pink Daybreak"] = "rbxassetid://271042516",
+    ["Dark Space"] = "rbxassetid://149397692",
+    ["Cloudy Sky"] = "rbxassetid://570557620",
+    ["Sunset"] = "rbxassetid://600886090"
+}
+
+local SkyboxDropdown = VisualTab:CreateDropdown({
+    Name = "Skybox Theme",
+    Options = {"Default", "Purple Nebula", "Pink Daybreak", "Dark Space", "Cloudy Sky", "Sunset"},
+    CurrentOption = {"Default"},
+    MultipleOptions = false,
+    Flag = "Skybox",
+    Callback = function(Option)
+        local sky = game.Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky", game.Lighting)
+        
+        if Option[1] == "Default" then
+            sky:Destroy()
+        else
+            local id = skyboxes[Option[1]]
+            sky.SkyboxBk = id
+            sky.SkyboxDn = id
+            sky.SkyboxFt = id
+            sky.SkyboxLf = id
+            sky.SkyboxRt = id
+            sky.SkyboxUp = id
+        end
+    end,
+})
+
+local AmbientColorPicker = VisualTab:CreateColorPicker({
+    Name = "Ambient Color",
+    Color = Color3.fromRGB(138, 138, 138),
+    Flag = "AmbientColor",
+    Callback = function(Value)
+        game.Lighting.Ambient = Value
+    end,
+})
+
+local OutdoorAmbientColorPicker = VisualTab:CreateColorPicker({
+    Name = "Outdoor Ambient Color",
+    Color = Color3.fromRGB(138, 138, 138),
+    Flag = "OutdoorAmbientColor",
+    Callback = function(Value)
+        game.Lighting.OutdoorAmbient = Value
+    end,
+})
+
+local ColorShiftTopColorPicker = VisualTab:CreateColorPicker({
+    Name = "Color Shift Top",
+    Color = Color3.fromRGB(0, 0, 0),
+    Flag = "ColorShiftTop",
+    Callback = function(Value)
+        game.Lighting.ColorShift_Top = Value
+    end,
+})
+
+local ColorShiftBottomColorPicker = VisualTab:CreateColorPicker({
+    Name = "Color Shift Bottom",
+    Color = Color3.fromRGB(0, 0, 0),
+    Flag = "ColorShiftBottom",
+    Callback = function(Value)
+        game.Lighting.ColorShift_Bottom = Value
+    end,
+})
+
+local AdvancedSection = VisualTab:CreateSection("Advanced Visuals")
+
+local XRayToggle = VisualTab:CreateToggle({
+    Name = "X-Ray (See Through Walls)",
+    CurrentValue = false,
+    Flag = "XRay",
+    Callback = function(Value)
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                for _, part in pairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        if Value then
+                            part.LocalTransparencyModifier = 0.5
+                        else
+                            part.LocalTransparencyModifier = 0
+                        end
+                    end
+                end
+            end
+        end
+    end,
+})
+
+local ChamsToggle = VisualTab:CreateToggle({
+    Name = "Chams (Player Highlights)",
+    CurrentValue = false,
+    Flag = "Chams",
+    Callback = function(Value)
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                local existing = player.Character:FindFirstChild("ChamsHighlight")
+                
+                if Value and not existing then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Name = "ChamsHighlight"
+                    highlight.Adornee = player.Character
+                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    highlight.FillTransparency = 0.3
+                    highlight.OutlineTransparency = 0
+                    highlight.Parent = player.Character
+                elseif not Value and existing then
+                    existing:Destroy()
+                end
+            end
+        end
+    end,
+})
+
+local NoClipToggle = VisualTab:CreateToggle({
+    Name = "Noclip (Walk Through Walls)",
+    CurrentValue = false,
+    Flag = "Noclip",
+    Callback = function(Value)
+        local RunService = game:GetService("RunService")
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        
+        if Value then
+            _G.NoclipConnection = RunService.Stepped:Connect(function()
+                if LocalPlayer.Character then
+                    for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            if _G.NoclipConnection then
+                _G.NoclipConnection:Disconnect()
+                _G.NoclipConnection = nil
+            end
+            
+            if LocalPlayer.Character then
+                for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end,
+})
+
+local CrosshairSection = VisualTab:CreateSection("Crosshair")
+
+local crosshairEnabled = false
+local crosshairLines = {}
+
+local CrosshairToggle = VisualTab:CreateToggle({
+    Name = "Custom Crosshair",
+    CurrentValue = false,
+    Flag = "Crosshair",
+    Callback = function(Value)
+        crosshairEnabled = Value
+        
+        if Value then
+            local size = 10
+            local thickness = 2
+            local gap = 5
+            
+            for i = 1, 4 do
+                local line = Drawing.new("Line")
+                line.Visible = true
+                line.Color = Color3.fromRGB(0, 255, 0)
+                line.Thickness = thickness
+                line.Transparency = 1
+                table.insert(crosshairLines, line)
+            end
+            
+            game:GetService("RunService").RenderStepped:Connect(function()
+                if not crosshairEnabled then
+                    for _, line in pairs(crosshairLines) do
+                        line.Visible = false
+                    end
+                    return
+                end
+                
+                local centerX = workspace.CurrentCamera.ViewportSize.X / 2
+                local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
+                
+                crosshairLines[1].From = Vector2.new(centerX - size - gap, centerY)
+                crosshairLines[1].To = Vector2.new(centerX - gap, centerY)
+                
+                crosshairLines[2].From = Vector2.new(centerX + gap, centerY)
+                crosshairLines[2].To = Vector2.new(centerX + size + gap, centerY)
+                
+                crosshairLines[3].From = Vector2.new(centerX, centerY - size - gap)
+                crosshairLines[3].To = Vector2.new(centerX, centerY - gap)
+                
+                crosshairLines[4].From = Vector2.new(centerX, centerY + gap)
+                crosshairLines[4].To = Vector2.new(centerX, centerY + size + gap)
+                
+                for _, line in pairs(crosshairLines) do
+                    line.Visible = true
+                end
+            end)
+        else
+            for _, line in pairs(crosshairLines) do
+                if line then
+                    line:Remove()
+                end
+            end
+            crosshairLines = {}
         end
     end,
 })
