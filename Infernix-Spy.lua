@@ -447,15 +447,6 @@ local ftapItems = {
 
 table.sort(ftapItems)
 
-local ItemNameInput = VisualTab:CreateInput({
-    Name = "Item Name to ESP",
-    PlaceholderText = "Enter item name or use dropdown",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        selectedItemName = Text
-    end,
-})
-
 local ItemPresetDropdown = VisualTab:CreateDropdown({
     Name = "FTAP Items",
     Options = ftapItems,
@@ -614,6 +605,8 @@ local function scanForItems()
     searchDescendants(workspace)
 end
 
+local itemESPRefreshLoop = nil
+
 local ItemESPToggle = VisualTab:CreateToggle({
     Name = "Enable Item ESP",
     CurrentValue = false,
@@ -625,7 +618,7 @@ local ItemESPToggle = VisualTab:CreateToggle({
             if selectedItemName == "" then
                 Rayfield:Notify({
                     Title = "Item ESP",
-                    Content = "Please enter an item name first!",
+                    Content = "Please select an item first!",
                     Duration = 3,
                 })
                 return
@@ -642,12 +635,24 @@ local ItemESPToggle = VisualTab:CreateToggle({
                 end
             end)
             
+            -- Auto-refresh every 10 seconds
+            itemESPRefreshLoop = game:GetService("RunService").Heartbeat:Connect(function()
+                wait(10)
+                if itemESPEnabled then
+                    scanForItems()
+                end
+            end)
+            
             Rayfield:Notify({
                 Title = "Item ESP",
                 Content = "Now tracking: " .. selectedItemName,
                 Duration = 2,
             })
         else
+            if itemESPRefreshLoop then
+                itemESPRefreshLoop:Disconnect()
+                itemESPRefreshLoop = nil
+            end
             removeItemESP()
         end
     end,
@@ -691,11 +696,17 @@ local SkyboxDropdown = VisualTab:CreateDropdown({
     MultipleOptions = false,
     Flag = "Skybox",
     Callback = function(Option)
-        local sky = game.Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky", game.Lighting)
-        
         if Option[1] == "Default" then
-            sky:Destroy()
+            local sky = game.Lighting:FindFirstChildOfClass("Sky")
+            if sky then
+                sky:Destroy()
+            end
         else
+            local sky = game.Lighting:FindFirstChildOfClass("Sky")
+            if not sky then
+                sky = Instance.new("Sky")
+                sky.Parent = game.Lighting
+            end
             local id = skyboxes[Option[1]]
             sky.SkyboxBk = id
             sky.SkyboxDn = id
@@ -740,6 +751,188 @@ local ColorShiftBottomColorPicker = VisualTab:CreateColorPicker({
     Flag = "ColorShiftBottom",
     Callback = function(Value)
         game.Lighting.ColorShift_Bottom = Value
+    end,
+})
+
+local ShadersSection = VisualTab:CreateSection("Shaders & Effects")
+
+local shaderPresets = {
+    ["Default"] = function()
+        game.Lighting.ClockTime = 14
+        game.Lighting.Ambient = Color3.fromRGB(138, 138, 138)
+        game.Lighting.OutdoorAmbient = Color3.fromRGB(138, 138, 138)
+        game.Lighting.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+        game.Lighting.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+        
+        for _, effect in pairs(game.Lighting:GetChildren()) do
+            if effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("BlurEffect") then
+                effect:Destroy()
+            end
+        end
+    end,
+    ["Sunset"] = function()
+        game.Lighting.ClockTime = 18
+        game.Lighting.Ambient = Color3.fromRGB(255, 140, 70)
+        game.Lighting.OutdoorAmbient = Color3.fromRGB(255, 120, 50)
+        game.Lighting.ColorShift_Top = Color3.fromRGB(255, 100, 50)
+        game.Lighting.ColorShift_Bottom = Color3.fromRGB(255, 150, 100)
+        
+        local bloom = Instance.new("BloomEffect")
+        bloom.Intensity = 0.4
+        bloom.Size = 24
+        bloom.Threshold = 0.8
+        bloom.Parent = game.Lighting
+        
+        local sunrays = Instance.new("SunRaysEffect")
+        sunrays.Intensity = 0.15
+        sunrays.Spread = 0.8
+        sunrays.Parent = game.Lighting
+        
+        local cc = Instance.new("ColorCorrectionEffect")
+        cc.Brightness = 0.05
+        cc.Contrast = 0.1
+        cc.Saturation = 0.2
+        cc.TintColor = Color3.fromRGB(255, 200, 150)
+        cc.Parent = game.Lighting
+    end,
+    ["Night Vision"] = function()
+        game.Lighting.ClockTime = 0
+        game.Lighting.Ambient = Color3.fromRGB(0, 255, 100)
+        game.Lighting.OutdoorAmbient = Color3.fromRGB(0, 255, 100)
+        game.Lighting.ColorShift_Top = Color3.fromRGB(0, 150, 50)
+        game.Lighting.ColorShift_Bottom = Color3.fromRGB(0, 100, 50)
+        game.Lighting.Brightness = 3
+        
+        local cc = Instance.new("ColorCorrectionEffect")
+        cc.Brightness = 0.3
+        cc.Contrast = 0.3
+        cc.Saturation = -0.5
+        cc.TintColor = Color3.fromRGB(100, 255, 100)
+        cc.Parent = game.Lighting
+        
+        local bloom = Instance.new("BloomEffect")
+        bloom.Intensity = 0.8
+        bloom.Size = 24
+        bloom.Threshold = 0.2
+        bloom.Parent = game.Lighting
+    end,
+    ["Glossy"] = function()
+        local bloom = Instance.new("BloomEffect")
+        bloom.Intensity = 1
+        bloom.Size = 24
+        bloom.Threshold = 0.5
+        bloom.Parent = game.Lighting
+        
+        local cc = Instance.new("ColorCorrectionEffect")
+        cc.Brightness = 0.15
+        cc.Contrast = 0.3
+        cc.Saturation = 0.3
+        cc.Parent = game.Lighting
+        
+        game.Lighting.GlobalShadows = true
+        game.Lighting.Technology = Enum.Technology.Future
+    end,
+    ["Retro"] = function()
+        local cc = Instance.new("ColorCorrectionEffect")
+        cc.Brightness = -0.05
+        cc.Contrast = 0.2
+        cc.Saturation = -0.3
+        cc.TintColor = Color3.fromRGB(255, 230, 200)
+        cc.Parent = game.Lighting
+        
+        local blur = Instance.new("BlurEffect")
+        blur.Size = 2
+        blur.Parent = game.Lighting
+    end,
+    ["Vibrant"] = function()
+        local bloom = Instance.new("BloomEffect")
+        bloom.Intensity = 0.6
+        bloom.Size = 24
+        bloom.Threshold = 0.7
+        bloom.Parent = game.Lighting
+        
+        local cc = Instance.new("ColorCorrectionEffect")
+        cc.Brightness = 0.1
+        cc.Contrast = 0.2
+        cc.Saturation = 0.5
+        cc.Parent = game.Lighting
+        
+        game.Lighting.Ambient = Color3.fromRGB(180, 180, 180)
+        game.Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180)
+    end
+}
+
+local ShaderPresetDropdown = VisualTab:CreateDropdown({
+    Name = "Shader Presets",
+    Options = {"Default", "Sunset", "Night Vision", "Glossy", "Retro", "Vibrant"},
+    CurrentOption = {"Default"},
+    MultipleOptions = false,
+    Flag = "ShaderPreset",
+    Callback = function(Option)
+        -- Remove existing effects
+        for _, effect in pairs(game.Lighting:GetChildren()) do
+            if effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("BlurEffect") then
+                effect:Destroy()
+            end
+        end
+        
+        -- Apply new shader
+        if shaderPresets[Option[1]] then
+            shaderPresets[Option[1]]()
+        end
+    end,
+})
+
+local SunRaysToggle = VisualTab:CreateToggle({
+    Name = "Sun Rays",
+    CurrentValue = false,
+    Flag = "SunRays",
+    Callback = function(Value)
+        local existing = game.Lighting:FindFirstChildOfClass("SunRaysEffect")
+        if Value and not existing then
+            local sunrays = Instance.new("SunRaysEffect")
+            sunrays.Intensity = 0.15
+            sunrays.Spread = 0.8
+            sunrays.Parent = game.Lighting
+        elseif not Value and existing then
+            existing:Destroy()
+        end
+    end,
+})
+
+local BloomToggle = VisualTab:CreateToggle({
+    Name = "Bloom Effect",
+    CurrentValue = false,
+    Flag = "Bloom",
+    Callback = function(Value)
+        local existing = game.Lighting:FindFirstChildOfClass("BloomEffect")
+        if Value and not existing then
+            local bloom = Instance.new("BloomEffect")
+            bloom.Intensity = 0.4
+            bloom.Size = 24
+            bloom.Threshold = 0.8
+            bloom.Parent = game.Lighting
+        elseif not Value and existing then
+            existing:Destroy()
+        end
+    end,
+})
+
+local ColorCorrectionToggle = VisualTab:CreateToggle({
+    Name = "Color Correction",
+    CurrentValue = false,
+    Flag = "ColorCorrection",
+    Callback = function(Value)
+        local existing = game.Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+        if Value and not existing then
+            local cc = Instance.new("ColorCorrectionEffect")
+            cc.Brightness = 0.05
+            cc.Contrast = 0.15
+            cc.Saturation = 0.2
+            cc.Parent = game.Lighting
+        elseif not Value and existing then
+            existing:Destroy()
+        end
     end,
 })
 
@@ -841,23 +1034,46 @@ local CrosshairToggle = VisualTab:CreateToggle({
         crosshairEnabled = Value
         
         if Value then
-            local size = 10
+            local size = 8
             local thickness = 2
-            local gap = 5
+            local gap = 4
+            local outlineThickness = 1
             
+            -- Create main crosshair lines (white)
             for i = 1, 4 do
                 local line = Drawing.new("Line")
                 line.Visible = true
-                line.Color = Color3.fromRGB(0, 255, 0)
+                line.Color = Color3.fromRGB(255, 255, 255)
                 line.Thickness = thickness
                 line.Transparency = 1
                 table.insert(crosshairLines, line)
             end
             
+            -- Create outline lines (black for contrast)
+            for i = 1, 4 do
+                local outline = Drawing.new("Line")
+                outline.Visible = true
+                outline.Color = Color3.fromRGB(0, 0, 0)
+                outline.Thickness = thickness + (outlineThickness * 2)
+                outline.Transparency = 0.8
+                table.insert(crosshairLines, outline)
+            end
+            
+            -- Create center dot
+            local centerDot = Drawing.new("Circle")
+            centerDot.Visible = true
+            centerDot.Color = Color3.fromRGB(255, 255, 255)
+            centerDot.Thickness = 1
+            centerDot.NumSides = 12
+            centerDot.Radius = 2
+            centerDot.Filled = true
+            centerDot.Transparency = 1
+            table.insert(crosshairLines, centerDot)
+            
             game:GetService("RunService").RenderStepped:Connect(function()
                 if not crosshairEnabled then
-                    for _, line in pairs(crosshairLines) do
-                        line.Visible = false
+                    for _, element in pairs(crosshairLines) do
+                        element.Visible = false
                     end
                     return
                 end
@@ -865,6 +1081,20 @@ local CrosshairToggle = VisualTab:CreateToggle({
                 local centerX = workspace.CurrentCamera.ViewportSize.X / 2
                 local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
                 
+                -- Update outline lines (black)
+                crosshairLines[5].From = Vector2.new(centerX - size - gap, centerY)
+                crosshairLines[5].To = Vector2.new(centerX - gap, centerY)
+                
+                crosshairLines[6].From = Vector2.new(centerX + gap, centerY)
+                crosshairLines[6].To = Vector2.new(centerX + size + gap, centerY)
+                
+                crosshairLines[7].From = Vector2.new(centerX, centerY - size - gap)
+                crosshairLines[7].To = Vector2.new(centerX, centerY - gap)
+                
+                crosshairLines[8].From = Vector2.new(centerX, centerY + gap)
+                crosshairLines[8].To = Vector2.new(centerX, centerY + size + gap)
+                
+                -- Update main lines (white)
                 crosshairLines[1].From = Vector2.new(centerX - size - gap, centerY)
                 crosshairLines[1].To = Vector2.new(centerX - gap, centerY)
                 
@@ -877,14 +1107,17 @@ local CrosshairToggle = VisualTab:CreateToggle({
                 crosshairLines[4].From = Vector2.new(centerX, centerY + gap)
                 crosshairLines[4].To = Vector2.new(centerX, centerY + size + gap)
                 
-                for _, line in pairs(crosshairLines) do
-                    line.Visible = true
+                -- Update center dot
+                crosshairLines[9].Position = Vector2.new(centerX, centerY)
+                
+                for _, element in pairs(crosshairLines) do
+                    element.Visible = true
                 end
             end)
         else
-            for _, line in pairs(crosshairLines) do
-                if line then
-                    line:Remove()
+            for _, element in pairs(crosshairLines) do
+                if element then
+                    element:Remove()
                 end
             end
             crosshairLines = {}
