@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/keys.txt",
+      "dest": "api/keys.js"
+    },
+    {
+      "src": "/validate/(.*)",
+      "dest": "api/validate.js"
+    },
+    {
+      "src": "/admin/keys",
+      "dest": "api/admin/keys.js"
+    },
+    {
+      "src": "/admin/generate",
+      "dest": "api/admin/generate.js"
+    }
+  ]
+}

@@ -19,11 +19,11 @@ local Window = Rayfield:CreateWindow({
     KeySettings = {
         Title = "Infernix Hub",
         Subtitle = "Key System",
-        Note = "Get your key from our Discord or website",
+        Note = "Get your key from our Discord or website - Keys reset every 24 hours!",
         FileName = "InfernixKey",
         SaveKey = true,
         GrabKeyFromSite = true,
-        Key = {"https://pastebin.com/raw/hEV49baM"}
+        Key = {"https://YOUR-DEPLOYMENT-URL.onrender.com/keys.txt"}
     }
 })
 
