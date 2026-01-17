@@ -22,8 +22,8 @@ local Window = Rayfield:CreateWindow({
         Note = "Get your key from our Discord or website - Keys reset every 24 hours!",
         FileName = "InfernixKey",
         SaveKey = true,
-        GrabKeyFromSite = true,
-        Key = {"https://YOUR-DEPLOYMENT-URL.onrender.com/keys.txt"}
+        GrabKeyFromSite = false,
+        Key = {"INF-2B4CC1722B33F890", "INF-69A446EB882A0BDA", "INF-D3E49B1C432A6E39", "INF-5A7B6F02E8C1687C", "INF-E7E40E52A4D40DB6", "INF-EF37B3DD373DE513", "INF-1F4C189935BB4185", "INF-C62FC80CCB8A7FA5", "INF-C714C6267E04D9F7", "INF-5BDAAE6E26EF4218"}
     }
 })
 
